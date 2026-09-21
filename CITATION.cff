@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this benchmark, please cite it as below."
+title: "info-reg-bench: explicit information-theoretic regularization for LLM fine-tuning"
+type: software
+authors:
+  - family-names: Ferrat
+    given-names: Rayane
+repository-code: "https://github.com/rayaneferr/info-reg-bench"
+license: MIT
+date-released: 2026-09-21
+keywords:
+  - information bottleneck
+  - regularization
+  - LLM fine-tuning
+  - calibration
+  - LoRA

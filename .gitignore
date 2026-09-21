@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+results/*/predictions_*.npz
+results/*/checkpoint*/
+.DS_Store
+results/_smoke/
+*.log
