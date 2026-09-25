@@ -210,6 +210,24 @@ def pick_curves(df: pd.DataFrame, n: int) -> list[str]:
     return runs
 
 
+def reliability_points(run: str, metrics: dict, n_bins: int, min_count: int) -> tuple[list, list]:
+    """(confidence, accuracy) per bin. Re-binned from the raw logits when they are on disk; on a fresh
+    clone (logits are git-ignored) falls back to the 15 bins stored in metrics.json."""
+    npz = RES / run / "predictions_val.npz"
+    if not npz.exists():
+        bins = [b for b in metrics["val"]["reliability"] if b["count"] >= min_count]
+        return [b["conf"] for b in bins], [b["acc"] for b in bins]
+    z = np.load(npz)
+    p = np.exp(z["logits"] - z["logits"].max(-1, keepdims=True)); p /= p.sum(-1, keepdims=True)
+    conf, correct = p.max(-1), (p.argmax(-1) == z["labels"]).astype(float)
+    xs, ys = [], []
+    for lo, hi in pairwise(np.linspace(1 / 3, 1, n_bins + 1)):
+        mask = (conf > lo) & (conf <= hi)
+        if mask.sum() >= min_count:
+            xs.append(conf[mask].mean()); ys.append(correct[mask].mean())
+    return xs, ys
+
+
 def reliability(df: pd.DataFrame, n: int, n_bins: int = 10, min_count: int = 25):
     runs = pick_curves(df, n)
     fig, ax = plt.subplots(figsize=(5.2, 5))
@@ -218,15 +236,7 @@ def reliability(df: pd.DataFrame, n: int, n_bins: int = 10, min_count: int = 25)
             rotation_mode="anchor", transform=ax.transData)
     for run in runs:
         m = json.loads((RES / run / "metrics.json").read_text())
-        z = np.load(RES / run / "predictions_val.npz")
-        p = np.exp(z["logits"] - z["logits"].max(-1, keepdims=True)); p /= p.sum(-1, keepdims=True)
-        conf, correct = p.max(-1), (p.argmax(-1) == z["labels"]).astype(float)
-        edges = np.linspace(1 / 3, 1, n_bins + 1)
-        xs, ys = [], []
-        for lo, hi in pairwise(edges):
-            mask = (conf > lo) & (conf <= hi)
-            if mask.sum() >= min_count:
-                xs.append(conf[mask].mean()); ys.append(correct[mask].mean())
+        xs, ys = reliability_points(run, m, n_bins, min_count)
         r = df[df.run == run].iloc[0]
         ax.plot(xs, ys, "o-", color=CURVE[r.method], zorder=3,
                 label=f"{label(r)}   ECE {m['val']['ece']:.3f}")
