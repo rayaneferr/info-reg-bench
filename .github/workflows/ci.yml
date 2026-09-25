@@ -13,11 +13,15 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+      # `uv sync` follows uv.lock, which pins the CUDA wheels on Linux (~3 GB of nvidia-* packages).
+      # `--torch-backend` is only honoured by `uv pip`, so install through it to get CPU-only torch.
       - name: Install (CPU torch)
-        run: uv sync --extra dev
-        env:
-          UV_TORCH_BACKEND: cpu
+        run: |
+          uv venv --python 3.12
+          uv pip install -e ".[dev]" --torch-backend cpu
+      - name: Check no CUDA wheels
+        run: "! uv pip list | grep -i nvidia"
       - name: Lint
-        run: uv run ruff check .
+        run: uv run --no-sync ruff check .
       - name: Unit tests
-        run: uv run pytest -q
+        run: uv run --no-sync pytest -q
