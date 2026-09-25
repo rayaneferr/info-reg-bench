@@ -51,10 +51,9 @@ def cmd_smoke(a):
 
 
 def cmd_grid(a):
+    from inforeg.grid import grid_configs
     from inforeg.train import run
-    from scripts.run_grid import GRID
-    cfgs = [Config(**g, n_train=n, seed=s, device=a.device, model_name=a.model_name)
-            for n in a.n_train for s in a.seeds for g in GRID]
+    cfgs = grid_configs(a.n_train, a.seeds, device=a.device, model_name=a.model_name)
     print(f"{len(cfgs)} runs:"); [print(" -", c.run_name) for c in cfgs]
     if not a.dry_run:
         for c in cfgs:
