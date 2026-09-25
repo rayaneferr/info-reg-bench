@@ -86,8 +86,10 @@ def agg(df: pd.DataFrame) -> pd.DataFrame:
     """mean ± std over seeds, one row per configuration, in display order."""
     keys = ["method", "beta", "epsilon", "weight_decay", "n_train"]
     num = df.select_dtypes("number").columns.difference(keys + ["seed"])
-    g = df.groupby(keys, sort=False)[list(num)].agg(["mean", "std"])
+    grouped = df.groupby(keys, sort=False)
+    g = grouped[list(num)].agg(["mean", "std"])
     g.columns = [f"{a}_{b}" for a, b in g.columns]
+    g["n_seeds"] = grouped.seed.nunique()
     g = g.reset_index()
     g["order"] = g.method.map(ORDER.index)
     g = g.sort_values(["n_train", "order", "weight_decay", "epsilon", "beta"]).drop(columns="order")
@@ -100,6 +102,34 @@ def _ref_line(ax, x, text, y_text=None, color=AXIS):
     ax.axvline(x, color=color, lw=1, zorder=1)
     ax.text(x, y_text if y_text is not None else ax.get_ylim()[1], f" {text}", color=MUTED, fontsize=7.5,
             ha="left", va="bottom", clip_on=False)
+
+
+TABLE = [("val_acc", "MNLI acc ↑", 3), ("hans_acc", "HANS acc ↑", 3), ("val_ece", "ECE ↓", 3),
+         ("gap_nll", "gap NLL ↓", 2), ("val_kl", "KL bound (nats)", 1)]
+
+
+def write_tables(g: pd.DataFrame):
+    """summary_by_config.csv (mean/std over seeds) and summary.md, the table pasted in the README."""
+    g.drop(columns="color").to_csv(RES / "summary_by_config.csv", index=False)
+    lines = []
+    for n, sub in g.groupby("n_train"):
+        seeds = sorted(set(sub.n_seeds))
+        lines += [f"**n_train = {n:,}** — {'/'.join(map(str, seeds))} seed(s), mean ± std", "",
+                  "| Method | " + " | ".join(h for _, h, _ in TABLE) + " |",
+                  "|---" * (len(TABLE) + 1) + "|"]
+        for _, r in sub.iterrows():
+            cells = []
+            for m, _, d in TABLE:
+                mu, sd = r[f"{m}_mean"], r[f"{m}_std"]
+                if m == "val_kl" and r.method != "vib":
+                    cells.append("—")
+                elif r.n_seeds > 1:
+                    cells.append(f"{mu:.{d}f} ± {sd:.{d}f}")
+                else:
+                    cells.append(f"{mu:.{d}f}")
+            lines.append(f"| {r.label.replace('  ', ' ')} | " + " | ".join(cells) + " |")
+        lines.append("")
+    (RES / "summary.md").write_text("\n".join(lines))
 
 
 # ---- figure 1: overview dot plot -------------------------------------------------------------
@@ -276,6 +306,7 @@ def main():
     FIG.mkdir(exist_ok=True)
     df = load()
     g = agg(df)
+    write_tables(g)
     cols = ["run", "train_acc", "val_acc", "hans_acc", "val_ece", "gap_nll", "val_kl", "time_min"]
     print(df[cols].to_string(index=False, float_format=lambda x: f"{x:.3f}"))
     for n in sorted(df.n_train.unique()):
@@ -283,7 +314,8 @@ def main():
         reliability(df, n)
         dynamics(df, n)
     beta_sweep(g)
-    print(f"\nwrote {RES / 'summary.csv'} and {len(list(FIG.glob('*.png')))} figures in figures/")
+    n_fig = len(list(FIG.glob('*.png')))
+    print(f"\nwrote summary.csv, summary_by_config.csv, summary.md and {n_fig} figures in figures/")
 
 
 if __name__ == "__main__":
