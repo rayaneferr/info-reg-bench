@@ -40,3 +40,4 @@ ignore = ["E402", "E701", "E702", "C408", "SIM108"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]   # tests import main.py from the repo root
