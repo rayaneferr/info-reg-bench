@@ -25,13 +25,14 @@ def set_seed(seed: int):
 @torch.no_grad()
 def predict(model, loader, device):
     model.eval()
-    logits, labels, kls = [], [], []
+    logits, labels, kl_sum = [], [], 0.0
     for batch in loader:
         out = model(batch["input_ids"].to(device), batch["attention_mask"].to(device))
         logits.append(out["logits"].float().cpu().numpy())
         labels.append(batch["labels"].numpy())
-        kls.append(float(out["kl"]))
-    return np.concatenate(logits), np.concatenate(labels), float(np.mean(kls))
+        kl_sum += float(out["kl"]) * len(batch["labels"])   # out["kl"] is a per-batch mean
+    labels = np.concatenate(labels)
+    return np.concatenate(logits), labels, kl_sum / len(labels)
 
 
 def run(cfg: Config, force: bool = False) -> dict:

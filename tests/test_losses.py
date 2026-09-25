@@ -82,3 +82,21 @@ def test_run_name_encodes_hyperparameters():
     assert Config(method="label_smoothing", epsilon=0.1).run_name == "label_smoothing_n1000_e0.1_s0"
     with pytest.raises(ValueError, match="method must be one of"):
         Config(method="nope")
+
+
+def test_predict_kl_is_a_per_example_mean_over_uneven_batches():
+    """The last batch is smaller: averaging batch means would over-weight it."""
+    from torch.utils.data import DataLoader
+
+    from inforeg.train import predict
+
+    class ConstKL(torch.nn.Module):   # per-batch KL = number of examples in the batch
+        def forward(self, input_ids, attention_mask):
+            b = input_ids.size(0)
+            return {"logits": torch.zeros(b, 3), "kl": torch.tensor(float(b))}
+
+    ds = [{"input_ids": torch.zeros(4, dtype=torch.long), "attention_mask": torch.ones(4, dtype=torch.long),
+           "labels": torch.tensor(0)} for _ in range(5)]
+    _, labels, kl = predict(ConstKL(), DataLoader(ds, batch_size=4), "cpu")   # batches of 4 and 1
+    assert len(labels) == 5
+    assert kl == pytest.approx((4 * 4 + 1 * 1) / 5)
