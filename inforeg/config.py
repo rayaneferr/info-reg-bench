@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 METHODS = ("none", "weight_decay", "label_smoothing", "confidence_penalty", "vib")
+# fields that change the result but are not the regularizer itself -> short tag in the run name
+RUN_NAME_ABBREV = {
+    "n_eval": "ne", "n_hans": "nh", "max_length": "len", "model_name": "", "lora_r": "r",
+    "lora_alpha": "la", "lora_dropout": "ld", "z_dim": "z", "dropout": "do", "epochs": "ep",
+    "batch_size": "bs", "lr": "lr", "warmup_ratio": "wu",
+}
 
 
 @dataclass
@@ -51,7 +57,19 @@ class Config:
             if self.method == "weight_decay":
                 parts.append(f"wd{self.weight_decay:g}")
             parts.append(f"s{self.seed}")
+            parts += self._non_default_suffix()
             self.run_name = "_".join(parts)
+
+    def _non_default_suffix(self) -> list[str]:
+        """Tag every non-default hyperparameter, so that e.g. `--epochs 3` never collides with
+        (and gets skipped as) the default run. Default runs keep their historical names."""
+        out = []
+        for f in fields(self):
+            if f.name not in RUN_NAME_ABBREV or getattr(self, f.name) == f.default:
+                continue
+            v = getattr(self, f.name)
+            out.append(v.rsplit("/", 1)[-1] if f.name == "model_name" else f"{RUN_NAME_ABBREV[f.name]}{v:g}")
+        return out
 
     @property
     def run_dir(self) -> Path:

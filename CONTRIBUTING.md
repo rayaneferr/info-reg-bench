@@ -8,7 +8,7 @@ Issues and PRs are welcome — especially new regularizers and new evaluation ax
 2. Implement the penalty in `inforeg/losses.py` (one branch, one docstring line with the formula).
    If it needs an architectural change (a bottleneck, an extra head), extend `Classifier` in `inforeg/model.py`.
 3. Add a unit test in `tests/test_losses.py` that checks the closed form on a random tensor.
-4. Add one entry to `GRID` in `scripts/run_grid.py` and a row to the methods table in `README.md`.
+4. Add one entry to `GRID` in `inforeg/grid.py` and a row to the methods table in `README.md`.
 
 ## Before opening a PR
 

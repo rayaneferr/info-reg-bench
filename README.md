@@ -94,9 +94,14 @@ heuristic, per-epoch history, reliability bins) and the raw validation / HANS lo
 | `--n_eval` / `--n_hans` | `2000` / `3000` | evaluation subsample sizes |
 | `--epochs` / `--lr` / `--batch_size` | `5` / `2e-4` / `16` | optimisation |
 | `--model_name` | `Qwen/Qwen2.5-0.5B` | any causal LM on the Hub |
+| `--lora_r` / `--lora_alpha` / `--lora_dropout` | `16` / `32` / `0.05` | LoRA adapters on `q,k,v,o` |
+| `--z_dim` | `128` | VIB bottleneck size |
+| `--max_length` / `--warmup_ratio` | `128` / `0.06` | tokenisation, LR schedule |
 | `--device` | `auto` | `mps` · `cuda` · `cpu` |
 
-Full list with `uv run main.py run --help`.
+Every `Config` field is a flag: full list with `uv run main.py run --help`. `grid` accepts the same flags and
+applies them to every run. Any non-default value is tagged in the run name (`vib_n1000_b0.001_s0_z64_ep3`),
+so a variant never overwrites — or gets skipped as — the default run.
 
 ---
 
@@ -224,12 +229,13 @@ make test lint      # or: uv run pytest -q && uv run ruff check .
 main.py                 CLI: run · smoke · grid · figures
 inforeg/
   config.py             Config dataclass, run naming
+  grid.py               the benchmark GRID, crossed with n_train × seeds
   data.py               MNLI (subsampled train, val-matched) + HANS (parquet), pair tokenisation
   model.py              Qwen2.5 + LoRA + LayerNorm + linear or VIB head
   losses.py             the regularizers — one function, one formula per docstring line
   metrics.py            accuracy, NLL, entropy, ECE, reliability bins, MNLI→HANS projection
   train.py              train / eval loop, result writing
-scripts/                run_experiment.py · run_grid.py (the GRID) · make_figures.py
+scripts/                make_figures.py (summary.csv + figures)
 tests/                  unit tests, no model download
 docs/                   THEORY.md (🇬🇧) · THEORIE.md (🇫🇷)
 results/                one folder per run (logits git-ignored, metrics.json kept)
