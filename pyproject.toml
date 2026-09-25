@@ -1,6 +1,6 @@
 [project]
 name = "info-reg-bench"
-version = "0.1.0"
+version = "0.2.0"
 description = "Benchmark of explicit information-theoretic regularization for LLM fine-tuning (Qwen2.5-0.5B + LoRA, MNLI -> HANS)"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"

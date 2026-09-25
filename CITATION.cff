@@ -7,7 +7,8 @@ authors:
     given-names: Rayane
 repository-code: "https://github.com/rayaneferr/info-reg-bench"
 license: MIT
-date-released: 2026-09-21
+version: 0.2.0
+date-released: 2026-09-25
 keywords:
   - information bottleneck
   - regularization
