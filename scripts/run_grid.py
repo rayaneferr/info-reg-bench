@@ -9,8 +9,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from inforeg.config import Config  # noqa: E402
-from inforeg.train import run  # noqa: E402
+from inforeg.config import Config
+from inforeg.train import run
 
 GRID = [
     dict(method="none"),

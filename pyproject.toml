@@ -30,8 +30,13 @@ line-length = 110
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
-ignore = ["E402", "E701", "E702"]
+# E/F/W/I: pycodestyle, pyflakes, isort · B: bugbear · UP: pyupgrade · C4: comprehensions
+# SIM: simplify · NPY: numpy · PT: pytest · RUF100: stale noqa
+select = ["E", "F", "I", "W", "B", "UP", "C4", "SIM", "NPY", "PT", "RUF100"]
+# compound one-liners are used on purpose for short plotting / seeding statements;
+# dict(...) keeps the GRID readable as keyword arguments; an if/else reads better than a ternary
+# for the VIB reparameterisation
+ignore = ["E402", "E701", "E702", "C408", "SIM108"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

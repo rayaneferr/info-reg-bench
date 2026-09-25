@@ -12,8 +12,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from inforeg.config import METHODS, Config  # noqa: E402
-from inforeg.train import run  # noqa: E402
+from inforeg.config import METHODS, Config
+from inforeg.train import run
 
 
 def main():

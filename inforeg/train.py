@@ -18,7 +18,8 @@ from .model import build, count_trainable, get_device
 
 
 def set_seed(seed: int):
-    random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
+    # seeds the global legacy RNG on purpose: that is what third-party code draws from
+    random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)  # noqa: NPY002
 
 
 @torch.no_grad()
