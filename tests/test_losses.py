@@ -72,12 +72,13 @@ def test_mnli_to_hans_merges_neutral_and_contradiction():
 
 
 def test_summarize_keys():
-    s = summarize(np.random.randn(20, 3), np.random.randint(0, 3, 20))
+    rng = np.random.default_rng(0)
+    s = summarize(rng.standard_normal((20, 3)), rng.integers(0, 3, 20))
     assert {"accuracy", "nll", "entropy", "ece", "reliability"} <= s.keys()
 
 
 def test_run_name_encodes_hyperparameters():
     assert Config(method="vib", beta=1e-3, n_train=1000).run_name == "vib_n1000_b0.001_s0"
     assert Config(method="label_smoothing", epsilon=0.1).run_name == "label_smoothing_n1000_e0.1_s0"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="method must be one of"):
         Config(method="nope")

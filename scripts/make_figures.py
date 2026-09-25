@@ -5,14 +5,15 @@ Figures follow a fixed visual grammar: colour encodes the *family* of the regula
 """
 import json
 import sys
+from itertools import pairwise
 from pathlib import Path
 
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 RES, FIG = ROOT / "results", ROOT / "figures"
@@ -110,7 +111,7 @@ def overview(g: pd.DataFrame, n: int):
               ("gap_nll", "Generalization gap  (val NLL − train NLL)  ↓", False)]
     fig, axes = plt.subplots(1, 4, figsize=(15, 0.42 * len(sub) + 1.9), sharey=True)
     y = np.arange(len(sub))[::-1]
-    for ax, (m, title, higher) in zip(axes, panels):
+    for ax, (m, title, higher) in zip(axes, panels, strict=True):
         vals, err = sub[f"{m}_mean"], sub[f"{m}_std"].fillna(0)
         ax.axvline(base[f"{m}_mean"], color=AXIS, lw=1, zorder=1)
         if m == "hans_acc":
@@ -156,14 +157,14 @@ def beta_sweep(g: pd.DataFrame):
     panels = [("val_acc", "MNLI accuracy  ↑"), ("hans_acc", "HANS accuracy (OOD)  ↑"),
               ("val_ece", "ECE  ↓"), ("gap_nll", "Generalization gap (NLL)  ↓")]
     fig, axes = plt.subplots(1, 4, figsize=(15, 3.6))
-    for ax, (m, title) in zip(axes, panels):
+    for ax, (m, title) in zip(axes, panels, strict=True):
         for n, s in vib.groupby("n_train"):
             s = s.sort_values("beta")
             ax.plot(s.beta, s[f"{m}_mean"], "o-", color=FAMILY["vib"][1], label=f"VIB, n={n:,}")
             base = g[(g.method == "none") & (g.n_train == n)]
             if not base.empty:
                 ax.axhline(base[f"{m}_mean"].iloc[0], color=AXIS, lw=1, zorder=1)
-                ax.text(ax.get_xlim()[0] if False else s.beta.min(), base[f"{m}_mean"].iloc[0],
+                ax.text(s.beta.min(), base[f"{m}_mean"].iloc[0],
                         "no regularization", color=MUTED, fontsize=7.5, va="bottom", ha="left")
         if m == "hans_acc":
             ax.axhline(0.5, color=AXIS, lw=1, zorder=1)
@@ -178,7 +179,7 @@ def beta_sweep(g: pd.DataFrame):
 
     # information kept vs generalization gap
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.6))
-    for n, s in vib.groupby("n_train"):
+    for _, s in vib.groupby("n_train"):
         s = s.sort_values("beta")
         axes[0].plot(s.beta, s.val_kl_mean, "o-", color=FAMILY["vib"][1])
         axes[1].plot(s.val_kl_mean, s.gap_nll_mean, "o-", color=FAMILY["vib"][1])
@@ -222,7 +223,7 @@ def reliability(df: pd.DataFrame, n: int, n_bins: int = 10, min_count: int = 25)
         conf, correct = p.max(-1), (p.argmax(-1) == z["labels"]).astype(float)
         edges = np.linspace(1 / 3, 1, n_bins + 1)
         xs, ys = [], []
-        for lo, hi in zip(edges[:-1], edges[1:]):
+        for lo, hi in pairwise(edges):
             mask = (conf > lo) & (conf <= hi)
             if mask.sum() >= min_count:
                 xs.append(conf[mask].mean()); ys.append(correct[mask].mean())
@@ -249,7 +250,7 @@ def dynamics(df: pd.DataFrame, n: int):
         axes[0].plot(h.epoch, h.train_ce, "o-", color=CURVE[r.method], label=label(r))
         axes[1].plot(h.epoch, h.val_nll, "o-", color=CURVE[r.method])
         axes[2].plot(h.epoch, h.val_ece, "o-", color=CURVE[r.method])
-    for ax, t in zip(axes, ["Train cross-entropy", "Validation NLL  ↓", "Validation ECE  ↓"]):
+    for ax, t in zip(axes, ["Train cross-entropy", "Validation NLL  ↓", "Validation ECE  ↓"], strict=True):
         ax.set_title(t, loc="left"); ax.set_xlabel("epoch"); ax.grid(axis="x", visible=False)
         ax.set_xticks(sorted(h.epoch))
     axes[0].legend(loc="upper right")

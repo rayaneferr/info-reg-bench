@@ -1,6 +1,8 @@
 """Accuracy, NLL, entropy, Expected Calibration Error and reliability bins."""
 from __future__ import annotations
 
+from itertools import pairwise
+
 import numpy as np
 
 
@@ -17,7 +19,7 @@ def ece(probs: np.ndarray, labels: np.ndarray, n_bins: int = 15):
     correct = (pred == labels).astype(float)
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     total, bins = 0.0, []
-    for lo, hi in zip(edges[:-1], edges[1:]):
+    for lo, hi in pairwise(edges):
         m = (conf > lo) & (conf <= hi)
         if m.sum() == 0:
             bins.append({"lo": lo, "hi": hi, "count": 0, "acc": None, "conf": None})

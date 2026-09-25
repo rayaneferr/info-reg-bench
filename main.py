@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from inforeg.config import METHODS, Config  # noqa: E402
+from inforeg.config import METHODS, Config
 
 
 def add_run_args(p: argparse.ArgumentParser):
@@ -47,7 +47,7 @@ def cmd_smoke(a):
     cfg = Config(method="vib", beta=1e-3, n_train=64, n_eval=64, n_hans=64, epochs=1,
                  model_name=a.model_name, device=a.device, out_dir="results/_smoke", run_name="smoke")
     r = run(cfg, force=True)
-    print("\nsmoke test OK — install works. val_acc=%.3f (meaningless at this size)" % r["val"]["accuracy"])
+    print(f"\nsmoke test OK — install works. val_acc={r['val']['accuracy']:.3f} (meaningless at this size)")
 
 
 def cmd_grid(a):
