@@ -151,7 +151,9 @@ This is the MNLI → HANS protocol of Mahabadi, Belinkov & Henderson (ICLR 2021)
 ## 📊 Results
 
 Grid at **n_train = 1 000**, one seed, Qwen2.5-0.5B + LoRA, 5 epochs. Full table in
-[`results/summary.csv`](results/summary.csv), per-run details in `results/<run>/metrics.json`.
+[`results/summary.csv`](results/summary.csv) (one row per run), aggregated over seeds in
+[`results/summary_by_config.csv`](results/summary_by_config.csv) and [`results/summary.md`](results/summary.md);
+per-run details in `results/<run>/metrics.json`.
 
 | Method | MNLI acc ↑ | HANS acc ↑ | ECE ↓ | gap NLL ↓ | KL bound (nats) |
 |---|---|---|---|---|---|
@@ -201,7 +203,9 @@ accuracy (0.752 → 0.742) — the model gives up a little of what fits MNLI to 
 ### Caveats
 
 - **One seed.** Differences below ~0.5 point (e.g. between the three VIB β on MNLI) are within noise.
-  Multi-seed error bars are the next item on the roadmap; `main.py grid --seeds 0 1 2` produces them.
+  HANS is known to be far more seed-sensitive than MNLI ([McCoy, Min & Linzen 2020](https://arxiv.org/abs/1911.02969)),
+  so the +7–8 point HANS gain of the VIB is the result most in need of replication.
+  `main.py grid --seeds 0 1 2` runs it; `main.py figures` then reports mean ± std and draws the error bars.
 - **One backbone, one training size.** The theory predicts the effect shrinks with more data; the
   n_train = 5 000 grid tests that.
 - **HANS is a diagnostic, not a benchmark to win.** 0.60 is still far from robust; the point is the *direction*
@@ -215,6 +219,8 @@ accuracy (0.752 → 0.742) — the model gives up a little of what fits MNLI to 
   the Gaussian KL is 0 at the prior, ECE is 0 for a perfectly calibrated predictor.
 - The un-regularised baseline shows the textbook overfitting signature on 1 000 examples: training CE falls
   from 1.08 to 0.03 over 5 epochs while validation NLL *rises* from 0.74 to 1.25 and ECE grows tenfold.
+- `tests/test_model.py` checks last-token pooling, the closed-form VIB KL and train/eval sampling on a tiny
+  random backbone; `tests/test_cli.py` freezes the run names the committed `results/` depend on.
 - `uv run main.py smoke` runs the full pipeline (data → LoRA → VIB → metrics) on 64 examples in about a minute.
 
 ```bash
@@ -245,7 +251,8 @@ figures/                generated PNGs (overview, β sweep, information, reliabi
 ## 🗺️ Roadmap
 
 - [x] V1 — 5 methods (9 configs), MNLI → HANS, accuracy / ECE / gap / KL bound, n_train = 1 000
-- [ ] n_train = 5 000 and 3 seeds (error bars)
+- [x] Seed aggregation: mean ± std tables and error bars (`main.py figures`)
+- [ ] Run the grid over 3 seeds, then n_train = 5 000
 - [ ] **UID** regularizer (Wei, Meister & Cotterell 2021) on a generation task
 - [ ] **KL to a reference model** — the RLHF form of information regularization
 - [ ] Layer-wise $I(X;Z)$ / $I(Z;Y)$ estimates: the information plane
