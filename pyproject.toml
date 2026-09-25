@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "jupyter", "ipykernel"]
+dev = ["pytest", "ruff"]
 
 [build-system]
 requires = ["hatchling"]
