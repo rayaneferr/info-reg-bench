@@ -1,0 +1,21 @@
+name: 💡 New regularizer or evaluation axis
+description: Propose a method, a metric or a dataset
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: What should be added, and which question it helps answer.
+    validations:
+      required: true
+  - type: textarea
+    id: formula
+    attributes:
+      label: Formula / reference
+      description: The penalty R in L = CE + R, or the metric definition, and the paper it comes from.
+  - type: textarea
+    id: cost
+    attributes:
+      label: Expected compute cost
+      description: Extra runs, extra memory, extra dependencies.

@@ -1,0 +1,25 @@
+name: 🐛 Bug report
+description: Something crashes or gives a wrong number
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and full traceback
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "macOS 15 / M4 Pro / mps, torch 2.14, uv 0.12"
+    validations:
+      required: true
