@@ -9,13 +9,10 @@ dependencies = [
   "transformers>=4.45",
   "peft>=0.13",
   "datasets>=3.0",
-  "accelerate>=1.0",
   "numpy",
   "pandas",
   "matplotlib",
-  "scikit-learn",
   "tqdm",
-  "pyyaml",
 ]
 
 [project.optional-dependencies]
