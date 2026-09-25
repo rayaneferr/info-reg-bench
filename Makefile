@@ -1,7 +1,10 @@
-.PHONY: install smoke grid figures test lint docker
+.PHONY: install hooks smoke grid figures test lint docker
 
 install:        ## create the env and install everything
 	uv sync --extra dev
+
+hooks:          ## install the pre-commit hooks (ruff, whitespace, uv.lock in sync)
+	uvx pre-commit install
 
 smoke:          ## 1-minute end-to-end check
 	uv run main.py smoke

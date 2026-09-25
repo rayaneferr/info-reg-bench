@@ -13,8 +13,12 @@ Issues and PRs are welcome — especially new regularizers and new evaluation ax
 ## Before opening a PR
 
 ```bash
+make hooks          # once: ruff + whitespace + uv.lock checks on every commit
 make lint test
 uv run main.py smoke
 ```
+
+PR titles must follow [Conventional Commits](https://www.conventionalcommits.org) (`feat:`, `fix:`,
+`docs:`, `refactor:`…): they become the merge commit on `main`, and CI checks them.
 
 Please keep `results/**/metrics.json` out of PRs unless you are adding a full, documented grid.
