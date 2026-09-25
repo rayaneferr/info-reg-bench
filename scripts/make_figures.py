@@ -86,8 +86,10 @@ def agg(df: pd.DataFrame) -> pd.DataFrame:
     """mean ± std over seeds, one row per configuration, in display order."""
     keys = ["method", "beta", "epsilon", "weight_decay", "n_train"]
     num = df.select_dtypes("number").columns.difference(keys + ["seed"])
-    g = df.groupby(keys, sort=False)[list(num)].agg(["mean", "std"])
+    grouped = df.groupby(keys, sort=False)
+    g = grouped[list(num)].agg(["mean", "std"])
     g.columns = [f"{a}_{b}" for a, b in g.columns]
+    g["n_seeds"] = grouped.seed.nunique()
     g = g.reset_index()
     g["order"] = g.method.map(ORDER.index)
     g = g.sort_values(["n_train", "order", "weight_decay", "epsilon", "beta"]).drop(columns="order")
@@ -100,6 +102,34 @@ def _ref_line(ax, x, text, y_text=None, color=AXIS):
     ax.axvline(x, color=color, lw=1, zorder=1)
     ax.text(x, y_text if y_text is not None else ax.get_ylim()[1], f" {text}", color=MUTED, fontsize=7.5,
             ha="left", va="bottom", clip_on=False)
+
+
+TABLE = [("val_acc", "MNLI acc ↑", 3), ("hans_acc", "HANS acc ↑", 3), ("val_ece", "ECE ↓", 3),
+         ("gap_nll", "gap NLL ↓", 2), ("val_kl", "KL bound (nats)", 1)]
+
+
+def write_tables(g: pd.DataFrame):
+    """summary_by_config.csv (mean/std over seeds) and summary.md, the table pasted in the README."""
+    g.drop(columns="color").to_csv(RES / "summary_by_config.csv", index=False)
+    lines = []
+    for n, sub in g.groupby("n_train"):
+        seeds = sorted(set(sub.n_seeds))
+        lines += [f"**n_train = {n:,}** — {'/'.join(map(str, seeds))} seed(s), mean ± std", "",
+                  "| Method | " + " | ".join(h for _, h, _ in TABLE) + " |",
+                  "|---" * (len(TABLE) + 1) + "|"]
+        for _, r in sub.iterrows():
+            cells = []
+            for m, _, d in TABLE:
+                mu, sd = r[f"{m}_mean"], r[f"{m}_std"]
+                if m == "val_kl" and r.method != "vib":
+                    cells.append("—")
+                elif r.n_seeds > 1:
+                    cells.append(f"{mu:.{d}f} ± {sd:.{d}f}")
+                else:
+                    cells.append(f"{mu:.{d}f}")
+            lines.append(f"| {r.label.replace('  ', ' ')} | " + " | ".join(cells) + " |")
+        lines.append("")
+    (RES / "summary.md").write_text("\n".join(lines))
 
 
 # ---- figure 1: overview dot plot -------------------------------------------------------------
@@ -142,7 +172,10 @@ def overview(g: pd.DataFrame, n: int):
                           label=f if f.startswith("reference") else f"R acts on {f}")
                for f, c in seen.items()]
     fig.legend(handles=handles, loc="lower center", ncol=len(handles), bbox_to_anchor=(0.5, -0.02))
-    fig.suptitle(f"Same backbone, same LoRA, {n:,} MNLI examples — only the penalty R in  L = CE + R  changes",  # noqa: E501
+    seeds = int(sub.n_seeds.max())
+    spread = f"   ·   mean ± std over {seeds} seeds" if seeds > 1 else ""
+    fig.suptitle(f"Same backbone, same LoRA, {n:,} MNLI examples — only the penalty R in  L = CE + R  changes"
+                 f"{spread}",
                  x=0.01, ha="left", fontsize=11.5, color=INK, fontweight="normal")
     fig.tight_layout(rect=(0, 0.06, 1, 0.97))
     fig.savefig(FIG / f"overview_n{n}.png", dpi=170)
@@ -160,7 +193,9 @@ def beta_sweep(g: pd.DataFrame):
     for ax, (m, title) in zip(axes, panels, strict=True):
         for n, s in vib.groupby("n_train"):
             s = s.sort_values("beta")
-            ax.plot(s.beta, s[f"{m}_mean"], "o-", color=FAMILY["vib"][1], label=f"VIB, n={n:,}")
+            ax.plot(s.beta, s[f"{m}_mean"], "o-", color=FAMILY["vib"][1], label=f"VIB, n={n:,}", zorder=3)
+            ax.errorbar(s.beta, s[f"{m}_mean"], yerr=s[f"{m}_std"].fillna(0), fmt="none",
+                        ecolor=FAMILY["vib"][1], elinewidth=1, capsize=3, alpha=0.6, zorder=2)
             base = g[(g.method == "none") & (g.n_train == n)]
             if not base.empty:
                 ax.axhline(base[f"{m}_mean"].iloc[0], color=AXIS, lw=1, zorder=1)
@@ -181,8 +216,13 @@ def beta_sweep(g: pd.DataFrame):
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.6))
     for _, s in vib.groupby("n_train"):
         s = s.sort_values("beta")
-        axes[0].plot(s.beta, s.val_kl_mean, "o-", color=FAMILY["vib"][1])
-        axes[1].plot(s.val_kl_mean, s.gap_nll_mean, "o-", color=FAMILY["vib"][1])
+        axes[0].plot(s.beta, s.val_kl_mean, "o-", color=FAMILY["vib"][1], zorder=3)
+        axes[0].errorbar(s.beta, s.val_kl_mean, yerr=s.val_kl_std.fillna(0), fmt="none",
+                         ecolor=FAMILY["vib"][1], elinewidth=1, capsize=3, alpha=0.6, zorder=2)
+        axes[1].plot(s.val_kl_mean, s.gap_nll_mean, "o-", color=FAMILY["vib"][1], zorder=3)
+        axes[1].errorbar(s.val_kl_mean, s.gap_nll_mean, xerr=s.val_kl_std.fillna(0),
+                         yerr=s.gap_nll_std.fillna(0), fmt="none", ecolor=FAMILY["vib"][1],
+                         elinewidth=1, capsize=3, alpha=0.6, zorder=2)
         for _, r in s.iterrows():
             axes[1].annotate(f"β={r.beta:g}", (r.val_kl_mean, r.gap_nll_mean), xytext=(7, 4),
                              textcoords="offset points", fontsize=8, color=INK2)
@@ -276,6 +316,7 @@ def main():
     FIG.mkdir(exist_ok=True)
     df = load()
     g = agg(df)
+    write_tables(g)
     cols = ["run", "train_acc", "val_acc", "hans_acc", "val_ece", "gap_nll", "val_kl", "time_min"]
     print(df[cols].to_string(index=False, float_format=lambda x: f"{x:.3f}"))
     for n in sorted(df.n_train.unique()):
@@ -283,7 +324,8 @@ def main():
         reliability(df, n)
         dynamics(df, n)
     beta_sweep(g)
-    print(f"\nwrote {RES / 'summary.csv'} and {len(list(FIG.glob('*.png')))} figures in figures/")
+    n_fig = len(list(FIG.glob('*.png')))
+    print(f"\nwrote summary.csv, summary_by_config.csv, summary.md and {n_fig} figures in figures/")
 
 
 if __name__ == "__main__":
