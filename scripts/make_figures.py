@@ -172,7 +172,10 @@ def overview(g: pd.DataFrame, n: int):
                           label=f if f.startswith("reference") else f"R acts on {f}")
                for f, c in seen.items()]
     fig.legend(handles=handles, loc="lower center", ncol=len(handles), bbox_to_anchor=(0.5, -0.02))
-    fig.suptitle(f"Same backbone, same LoRA, {n:,} MNLI examples — only the penalty R in  L = CE + R  changes",  # noqa: E501
+    seeds = int(sub.n_seeds.max())
+    spread = f"   ·   mean ± std over {seeds} seeds" if seeds > 1 else ""
+    fig.suptitle(f"Same backbone, same LoRA, {n:,} MNLI examples — only the penalty R in  L = CE + R  changes"
+                 f"{spread}",
                  x=0.01, ha="left", fontsize=11.5, color=INK, fontweight="normal")
     fig.tight_layout(rect=(0, 0.06, 1, 0.97))
     fig.savefig(FIG / f"overview_n{n}.png", dpi=170)
@@ -190,7 +193,9 @@ def beta_sweep(g: pd.DataFrame):
     for ax, (m, title) in zip(axes, panels, strict=True):
         for n, s in vib.groupby("n_train"):
             s = s.sort_values("beta")
-            ax.plot(s.beta, s[f"{m}_mean"], "o-", color=FAMILY["vib"][1], label=f"VIB, n={n:,}")
+            ax.plot(s.beta, s[f"{m}_mean"], "o-", color=FAMILY["vib"][1], label=f"VIB, n={n:,}", zorder=3)
+            ax.errorbar(s.beta, s[f"{m}_mean"], yerr=s[f"{m}_std"].fillna(0), fmt="none",
+                        ecolor=FAMILY["vib"][1], elinewidth=1, capsize=3, alpha=0.6, zorder=2)
             base = g[(g.method == "none") & (g.n_train == n)]
             if not base.empty:
                 ax.axhline(base[f"{m}_mean"].iloc[0], color=AXIS, lw=1, zorder=1)
@@ -211,8 +216,13 @@ def beta_sweep(g: pd.DataFrame):
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.6))
     for _, s in vib.groupby("n_train"):
         s = s.sort_values("beta")
-        axes[0].plot(s.beta, s.val_kl_mean, "o-", color=FAMILY["vib"][1])
-        axes[1].plot(s.val_kl_mean, s.gap_nll_mean, "o-", color=FAMILY["vib"][1])
+        axes[0].plot(s.beta, s.val_kl_mean, "o-", color=FAMILY["vib"][1], zorder=3)
+        axes[0].errorbar(s.beta, s.val_kl_mean, yerr=s.val_kl_std.fillna(0), fmt="none",
+                         ecolor=FAMILY["vib"][1], elinewidth=1, capsize=3, alpha=0.6, zorder=2)
+        axes[1].plot(s.val_kl_mean, s.gap_nll_mean, "o-", color=FAMILY["vib"][1], zorder=3)
+        axes[1].errorbar(s.val_kl_mean, s.gap_nll_mean, xerr=s.val_kl_std.fillna(0),
+                         yerr=s.gap_nll_std.fillna(0), fmt="none", ecolor=FAMILY["vib"][1],
+                         elinewidth=1, capsize=3, alpha=0.6, zorder=2)
         for _, r in s.iterrows():
             axes[1].annotate(f"β={r.beta:g}", (r.val_kl_mean, r.gap_nll_mean), xytext=(7, 4),
                              textcoords="offset points", fontsize=8, color=INK2)
